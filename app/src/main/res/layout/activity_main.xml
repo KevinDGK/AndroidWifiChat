@@ -29,8 +29,7 @@
         android:id="@+id/tv_online"
         android:layout_width="100px"
         android:layout_height="50px"
-        android:layout_marginBottom="10px"
-        android:layout_marginTop="10px"
+        android:layout_marginTop="50px"
         android:background="@drawable/selector_btn_bg"
         android:gravity="center"
         android:text="上线"
@@ -41,11 +40,21 @@
         android:id="@+id/tv_offline"
         android:layout_width="100px"
         android:layout_height="50px"
-        android:layout_marginBottom="10px"
-        android:layout_marginTop="10px"
+        android:layout_marginTop="50px"
         android:background="@drawable/selector_btn_bg"
         android:gravity="center"
         android:text="下线"
+        android:textColor="#000"
+        android:textSize="32px" />
+
+    <TextView
+        android:id="@+id/tv_exit"
+        android:layout_width="100px"
+        android:layout_height="50px"
+        android:layout_marginTop="50px"
+        android:background="@drawable/selector_btn_bg"
+        android:gravity="center"
+        android:text="退出"
         android:textColor="#000"
         android:textSize="32px" />
 

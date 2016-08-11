@@ -1,22 +1,20 @@
-package com.dgk.wifichat.model.service.heart;
+package com.dgk.wifichat.model.service;
 
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.Paint;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.SystemClock;
-import android.view.ViewDebug;
 
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.app.MyApplication;
 import com.dgk.wifichat.model.bean.BaseDataPackage;
 import com.dgk.wifichat.model.bean.HeartBean;
-import com.dgk.wifichat.model.event.HeartWorkingEvent;
+import com.dgk.wifichat.model.bean.HeartDataPackage;
+import com.dgk.wifichat.model.event.ChatServiceSettingEvent;
 import com.dgk.wifichat.model.sp.SPConstants;
 import com.dgk.wifichat.model.sp.SPUtils;
-import com.dgk.wifichat.utils.CommonUtil;
 import com.dgk.wifichat.utils.LogUtil;
 
 import org.greenrobot.eventbus.EventBus;
@@ -28,7 +26,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
-import java.util.List;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -37,15 +34,17 @@ import rx.schedulers.Schedulers;
 
 /**
  * Created by Kevin on 2016/8/9.
- * 心跳服务
+ * 聊天服务
  * - 管理心跳发送和接收的线程
+ * - 管理单聊发动核接收的线程
+ * - 管理
  */
-public class HeartService extends Service {
+public class ChatService extends Service {
 
     private static final int HEART_ACTION = 1000;
     private static final int HEART_ACTION_PERSON = 1001;
     private static final int HEART_ACTION_GROUP = 1002;
-    private static String tag = "【HeartService】";
+    private static String tag = "【ChatService】";
 
     private MulticastSocket socket;               // 组播Socket，socket貌似是全双工的，可以同时发送和接收，暂时没错
     private InetAddress broadcastAddress;         // 组播地址
@@ -99,19 +98,32 @@ public class HeartService extends Service {
             socket.joinGroup(broadcastAddress);
 
             //3. 设置本多播Socket发送的数据报是否会被回送到自身:false表示会接收
-            socket.setLoopbackMode(true);
+            socket.setLoopbackMode(false);
 
-            sendHeartThread = new SendHeartThread();
-            receiveHeartThread = new ReceiveHeartThread();
-
-            sendHeartThread.start();
-            receiveHeartThread.start();
+            startAllThread();
 
         } catch (IOException e) {
             LogUtil.i(tag, "初始化心跳Socket或者开启线程失败！");
             e.printStackTrace();
         }
 
+    }
+
+    /**
+     * 创建并开启所有的线程
+     */
+    private void startAllThread() {
+
+        //1. 创建线程
+        sendHeartThread = new SendHeartThread();
+        receiveHeartThread = new ReceiveHeartThread();
+
+        //2. 开始执行线程，即执行run方法
+        sendHeartThread.start();
+        receiveHeartThread.start();
+
+        //3. 设置线程开始工作，即执行run方法里面的while方法里面的if的逻辑代码
+        setThreadWorking(true);
     }
 
     @Override
@@ -140,6 +152,23 @@ public class HeartService extends Service {
             e.printStackTrace();
         }
 
+    }
+
+    /**
+     * 设置服务中的线程是否工作
+     * 不是创建和终止线程，仅仅是开始和停止线程中的run方法里面的while循环中的if逻辑代码的执行
+     *
+     * @param flag
+     */
+    private void setThreadWorking(boolean flag) {
+
+        LogUtil.i(tag, "设置服务中的线程是否working：" + flag);
+        if (sendHeartThread != null && sendHeartThread.isAlive()) {
+            sendHeartThread.setWorking(flag);
+        }
+        if (receiveHeartThread != null && receiveHeartThread.isAlive()) {
+            receiveHeartThread.setWorking(flag);
+        }
     }
 
     /**
@@ -215,7 +244,7 @@ public class HeartService extends Service {
 
         private String tag = "【SendHeartThread】";
         private boolean isRunning = true;   // 线程是否执行run方法里面的逻辑循环，初始化执行run方法
-        private boolean isWorking = true;  // 线程是否可以工作(发送/接收数据)
+        private boolean isWorking = false;  // 线程是否可以工作(发送/接收数据)
         private byte[] body = new byte[GlobalConfig.heartBodyLength];
 
         public SendHeartThread() {
@@ -242,7 +271,8 @@ public class HeartService extends Service {
                         heart.setID(SPUtils.getString(MyApplication.getContext(), SPConstants.USER_ID, "250"));
                         heart.setName(SPUtils.getString(MyApplication.getContext(), SPConstants.USER_NAME, "Guest"));
                         heart.setIpAddress(GlobalConfig.localIpAddress);
-                        heart.setExtend(GlobalConfig.extend.getBytes());
+                        heart.setTime(System.currentTimeMillis());
+                        heart.setExtend(GlobalConfig.extend);
                         heart.setBody(body);
 
                         //3. 将心跳数据包封装成标准数据包创建DatagramPacket
@@ -294,7 +324,7 @@ public class HeartService extends Service {
 
         private String tag = "【ReceiveHeartThread】";
         private boolean isRunning = true;   // 线程是否执行run方法里面的逻辑循环，初始化执行run方法
-        private boolean isWorking = true;  // 线程是否可以工作(发送/接收数据)
+        private boolean isWorking = false;  // 线程是否可以工作(发送/接收数据)
 
         private byte[] heart = new byte[GlobalConfig.heartDataLength];
 
@@ -330,6 +360,7 @@ public class HeartService extends Service {
                         String id = baseDataPackage.getID();
                         String name = baseDataPackage.getName();
                         int ipAddress = baseDataPackage.getIpAddress();
+                        long time = baseDataPackage.getTime();
                         String extend = baseDataPackage.getExtend();
 
                         for (int i = GlobalConfig.baseHeadLength; i < GlobalConfig.heartDataLength; i++) {
@@ -337,16 +368,9 @@ public class HeartService extends Service {
                         }
                         byte action = body[0];  // 心跳的动作
 
-//                        LogUtil.i(tag,"接收到心跳数据"
-//                                + "\nID：" + id
-//                                + "\nName：" + name
-//                                + "\nIpAddress：" + CommonUtil.IntToIp(ipAddress)
-//                                + "\nExtend：" + extend
-//                                + "\nAction：" + action);
-
                         Message msg = Message.obtain();
                         msg.what = HEART_ACTION;
-                        msg.obj = new HeartBean(id, name, ipAddress, extend, action);
+                        msg.obj = new HeartBean(id, name, ipAddress, time, extend, action);
                         handler.sendMessage(msg);
 
                     } catch (Exception e) {
@@ -382,43 +406,48 @@ public class HeartService extends Service {
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    public void personEvent(final HeartWorkingEvent event) {
+    public void personEvent(final ChatServiceSettingEvent event) {
 
-        Observable.create(new Observable.OnSubscribe<HeartWorkingEvent>() {
+        final int flag = event.isFlag();
+
+        if (flag == GlobalConfig.ACTION_PERSON_ONLINE) {
+            setThreadWorking(true);
+        } else if (flag == GlobalConfig.ACTION_PERSON_OFFLINE) {
+            handlePersonEvent(flag);
+        } else if (flag == GlobalConfig.ACTION_PERSON_EXIT) {
+            ChatService.this.onDestroy();
+        }
+
+    }
+
+    private void handlePersonEvent(final int flag) {
+
+        Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
-            public void call(Subscriber<? super HeartWorkingEvent> subscriber) {
+            public void call(Subscriber<? super Object> subscriber) {
 
-                SystemClock.sleep(5000);
-                subscriber.onNext(event);
+                // 当接收到的是本机需要下线的消息的时候，将在线标志改为下线，然后发送下线的心跳数据包
+                SystemClock.sleep((long) (GlobalConfig.HEART_INTERVAL * 1.1));
+
+                subscriber.onNext(null);
                 subscriber.onCompleted();
             }
         }).subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<HeartWorkingEvent>() {
+                .subscribe(new Subscriber<Object>() {
                     @Override
                     public void onCompleted() {
-
                     }
 
                     @Override
                     public void onError(Throwable e) {
-
                     }
 
                     @Override
-                    public void onNext(HeartWorkingEvent event) {
-
-                        LogUtil.i(tag, "发送和接收数据的线程不工作，但是不停止线程");
-                        if (sendHeartThread != null && sendHeartThread.isAlive()) {
-                            sendHeartThread.setWorking(event.isFlag());
-                        }
-                        if (receiveHeartThread != null && receiveHeartThread.isAlive()) {
-                            receiveHeartThread.setWorking(event.isFlag());
-                        }
+                    public void onNext(Object o) {
+                        setThreadWorking(false);
                     }
                 });
-
-
     }
 
 }

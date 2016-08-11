@@ -112,8 +112,8 @@ public class LoginPresenter extends BasePresenter<LoginContract.IView> implement
                     @Override
                     public void onNext(Object o) {
 
-                        // 开启心跳服务
-                        ServiceModel.getInstance().startHeartService();
+                        // 开启聊天服务
+                        ServiceModel.getInstance().onCreateChatService();
                     }
                 });
     }

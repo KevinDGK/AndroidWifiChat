@@ -10,9 +10,10 @@ import com.dgk.wifichat.R;
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.base.BaseActivity;
 import com.dgk.wifichat.model.bean.HeartBean;
-import com.dgk.wifichat.model.event.HeartWorkingEvent;
+import com.dgk.wifichat.model.event.ChatServiceSettingEvent;
 import com.dgk.wifichat.model.service.ServiceModel;
 import com.dgk.wifichat.utils.CommonUtil;
+import com.dgk.wifichat.utils.LogUtil;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -28,6 +29,8 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
     TextView tvOnline;
     @BindView(R.id.tv_offline)
     TextView tvOffline;
+    @BindView(R.id.tv_exit)
+    TextView tvExit;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,22 +64,34 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
 
     }
 
-    @OnClick({R.id.tv_online,R.id.tv_offline})
+    @OnClick({R.id.tv_online, R.id.tv_offline, R.id.tv_exit})
     public void onClick(View v) {
 
         switch (v.getId()) {
 
             case R.id.tv_online:    // 上线
-                GlobalConfig.PERSON_CURRENT_STATE = GlobalConfig.ACTION_PERSON_ONLINE;
-                EventBus.getDefault().post(new HeartWorkingEvent(true));
-//                ServiceModel.getInstance().startHeartService();
+                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_ONLINE) {
+                    CommonUtil.toast("大人，您已经在线上了~");
+                }
+                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_OFFLINE) {
+                    ServiceModel.getInstance().onStartChatService();
+                }
+                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_EXIT) {
+                    ServiceModel.getInstance().onCreateChatService();
+                }
                 break;
 
             case R.id.tv_offline:   // 下线
-                GlobalConfig.PERSON_CURRENT_STATE = GlobalConfig.ACTION_PERSON_OFFLINE;
-                EventBus.getDefault().post(new HeartWorkingEvent(false));
-//                ServiceModel.getInstance().startHeartService();
+                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_ONLINE) {
+                    ServiceModel.getInstance().onStopHeartService();
+                } else {
+                    CommonUtil.toast("大人，您已经从线上滚下来啦!");
+                }
                 break;
+
+            case R.id.tv_exit:      // 退出
+                ServiceModel.getInstance().onDestroyHeartService();
+                finish();
         }
     }
 

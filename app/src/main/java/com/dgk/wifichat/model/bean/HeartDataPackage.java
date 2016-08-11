@@ -1,4 +1,4 @@
-package com.dgk.wifichat.model.service.heart;
+package com.dgk.wifichat.model.bean;
 
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.model.bean.BaseDataPackage;

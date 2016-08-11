@@ -52,7 +52,7 @@ public class GlobalConfig {
     public static int heartDataLength = baseHeadLength + heartBodyLength;
 
     /** 心跳数据包发送的间隔 */
-    public static int HEART_INTERVAL = 2000;    // ms
+    public static int HEART_INTERVAL = 2500;    // ms
 
     /** 设备信息 */
     public static String devInfo = android.os.Build.MODEL + " Android " + android.os.Build.VERSION.RELEASE;
@@ -69,10 +69,12 @@ public class GlobalConfig {
     public static byte ACTION_PERSON_ONLINE = 0;
     /** Action:个人下线 */
     public static byte ACTION_PERSON_OFFLINE = 1;
+    /** Action:个人退出 */
+    public static byte ACTION_PERSON_EXIT = 2;
     /** Action:群创建 */
-    public static byte ACTION_GROUP_ONLINE = 2;
+    public static byte ACTION_GROUP_ONLINE = 3;
     /** Action:群删除 */
-    public static byte ACTION_GROUP_OFFLINE = 3;
+    public static byte ACTION_GROUP_OFFLINE = 4;
 
     private static GlobalConfig config;
 

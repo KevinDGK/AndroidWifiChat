@@ -8,13 +8,15 @@ public class HeartBean {
     private String id;
     private String name;
     private int ipAddress;
+    private long time;
     private String extend;
     private byte Action;
 
-    public HeartBean(String id, String name, int ipAddress, String extend, byte action) {
+    public HeartBean(String id, String name, int ipAddress, long time, String extend, byte action) {
         this.id = id;
         this.name = name;
         this.ipAddress = ipAddress;
+        this.time = time;
         this.extend = extend;
         Action = action;
     }
@@ -59,12 +61,21 @@ public class HeartBean {
         Action = action;
     }
 
+    public long getTime() {
+        return time;
+    }
+
+    public void setTime(long time) {
+        this.time = time;
+    }
+
     @Override
     public String toString() {
         return "HeartBean{" +
                 "id='" + id + '\'' +
                 ", name='" + name + '\'' +
                 ", ipAddress=" + ipAddress +
+                ", time=" + time +
                 ", extend='" + extend + '\'' +
                 ", Action=" + Action +
                 '}';

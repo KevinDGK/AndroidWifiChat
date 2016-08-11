@@ -35,7 +35,7 @@
 
 
         <!-- 服务 -->
-        <service android:name=".model.service.heart.HeartService"/>
+        <service android:name=".model.service.ChatService"/>
 
     </application>
 

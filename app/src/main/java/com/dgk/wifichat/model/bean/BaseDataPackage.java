@@ -1,7 +1,6 @@
 package com.dgk.wifichat.model.bean;
 
 import com.dgk.wifichat.app.GlobalConfig;
-import com.dgk.wifichat.utils.LogUtil;
 
 /**
  * Created by Kevin on 2016/8/9.
@@ -10,7 +9,8 @@ import com.dgk.wifichat.utils.LogUtil;
  * ID           18210186283     11位字符串                  20字节    0~19
  * Name         aaaaaaaaaa      20个英文字符或者6个汉字      20字节    20~39
  * IpAddress    172.168.0.1     1个int类型                  4字节     40~43
- * Extend       扩展字段                                    56字节    44~99
+ * Time                         毫秒值，long类型             8字节     44~51
+ * Extend       扩展字段                                    48字节    52~99
  */
 public class BaseDataPackage {
 
@@ -50,10 +50,20 @@ public class BaseDataPackage {
         head[43] = (byte) ((ipAddress & 0xFF));
     }
 
-    public void setExtend(byte[] data) {
+    public void setTime(long time) {
 //        LogUtil.i(tag,"Extend 字节数组长度：" + data.length);
-        for (int i = 0; i < Math.min(data.length,56); i++) {
-            head[i + 44] = data[i];
+        long temp = time;
+        for (int i = 51; i >= 44; i--) {
+            head[i] = (byte) (temp & 0xFF);
+            temp  = temp >> 8;
+        }
+    }
+
+    public void setExtend(String extend) {
+        byte[] data = extend.getBytes(GlobalConfig.ENCODING_STYLE);
+//        LogUtil.i(tag,"Extend 字节数组长度：" + data.length);
+        for (int i = 0; i < Math.min(data.length,48); i++) {
+            head[i + 52] = data[i];
         }
     }
 
@@ -85,10 +95,19 @@ public class BaseDataPackage {
         return ipAddress;
     }
 
+    public long getTime() {
+//        LogUtil.i(tag,"Extend 字节数组长度：" + data.length);
+        long time = 0;
+        for (int i = 44; i <= 51; i++) {
+            time = (time << 8) + head[i];
+        }
+        return time;
+    }
+
     public String getExtend() {
-        byte[] extend = new byte[57];
-        for (int i = 44; i <= 99; i++) {
-            extend[i-44] = head[i];
+        byte[] extend = new byte[48];
+        for (int i = 52; i <= 99; i++) {
+            extend[i-52] = head[i];
         }
         return new String(extend,GlobalConfig.ENCODING_STYLE).trim();
     }
