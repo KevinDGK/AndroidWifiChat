@@ -79,7 +79,6 @@ public class ServiceModel {
     public void onDestroyHeartService() {
 
         EventBus.getDefault().post(new ChatServiceSettingEvent(GlobalConfig.ACTION_PERSON_EXIT));
-//        ctx.stopService(intent_ChatService);
     }
 
 }

@@ -5,12 +5,12 @@ import com.dgk.wifichat.app.GlobalConfig;
 /**
  * Created by Kevin on 2016/8/9.
  * 标准数据包头 100byte
- * <p>
- * ID           18210186283     11位字符串                  20字节    0~19
- * Name         aaaaaaaaaa      20个英文字符或者6个汉字      20字节    20~39
- * IpAddress    172.168.0.1     1个int类型                  4字节     40~43
- * Time                         毫秒值，long类型             8字节     44~51
- * Extend       扩展字段                                    48字节    52~99
+ * <p>          个人              群组
+ * ID         id(手机号)         id(随机字符串)       18210186283      11位字符串                 20字节    0~19
+ * Name         名称              群名称              aaaaaaaaaa      20个英文字符或者6个汉字      20字节    20~39
+ * IpAddress    个人ip            群主的ip            172.168.0.1     1个int类型                  4字节     40~43
+ * Time         心跳包的时间       心跳包的时间                         毫秒值，long类型            8字节     44~51
+ * Extend       扩展字段           扩展字段                                                      48字节    52~99
  */
 public class BaseDataPackage {
 

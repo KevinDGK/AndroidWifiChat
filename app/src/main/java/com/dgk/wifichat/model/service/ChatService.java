@@ -9,7 +9,6 @@ import android.os.SystemClock;
 
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.app.MyApplication;
-import com.dgk.wifichat.model.bean.BaseDataPackage;
 import com.dgk.wifichat.model.bean.HeartBean;
 import com.dgk.wifichat.model.bean.HeartDataPackage;
 import com.dgk.wifichat.model.event.ChatServiceSettingEvent;
@@ -42,8 +41,6 @@ import rx.schedulers.Schedulers;
 public class ChatService extends Service {
 
     private static final int HEART_ACTION = 1000;
-    private static final int HEART_ACTION_PERSON = 1001;
-    private static final int HEART_ACTION_GROUP = 1002;
     private static String tag = "【ChatService】";
 
     private MulticastSocket socket;               // 组播Socket，socket貌似是全双工的，可以同时发送和接收，暂时没错
@@ -123,7 +120,7 @@ public class ChatService extends Service {
         receiveHeartThread.start();
 
         //3. 设置线程开始工作，即执行run方法里面的while方法里面的if的逻辑代码
-        setThreadWorking(true);
+        setHeartThreadWorking(true,true);
     }
 
     @Override
@@ -136,8 +133,11 @@ public class ChatService extends Service {
     public void onDestroy() {
         super.onDestroy();
         EventBus.getDefault().unregister(this);
+
         LogUtil.i(tag, "onDestroy()");
         try {
+
+            heartPersonList.clear();
 
             if (sendHeartThread != null && sendHeartThread.isAlive()) {
                 sendHeartThread.setRunning(false);
@@ -157,18 +157,18 @@ public class ChatService extends Service {
     /**
      * 设置服务中的线程是否工作
      * 不是创建和终止线程，仅仅是开始和停止线程中的run方法里面的while循环中的if逻辑代码的执行
-     *
-     * @param flag
      */
-    private void setThreadWorking(boolean flag) {
+    private void setHeartThreadWorking(boolean send, boolean receive) {
 
-        LogUtil.i(tag, "设置服务中的线程是否working：" + flag);
+        LogUtil.i(tag, "设置服务中的线程是否working：" + send + " , " + receive);
         if (sendHeartThread != null && sendHeartThread.isAlive()) {
-            sendHeartThread.setWorking(flag);
+            sendHeartThread.setWorking(send);
         }
         if (receiveHeartThread != null && receiveHeartThread.isAlive()) {
-            receiveHeartThread.setWorking(flag);
+            receiveHeartThread.setWorking(receive);
         }
+
+        heartPersonList.clear();
     }
 
     /**
@@ -203,13 +203,16 @@ public class ChatService extends Service {
      */
     private void checkPerson(HeartBean heartBean) {
 
+        if (GlobalConfig.PERSON_CURRENT_STATE != GlobalConfig.ACTION_PERSON_ONLINE) return;
+
         LogUtil.i(tag, "接收到个人心跳包：" + heartBean.toString());
         LogUtil.i(tag, "目前在线列表中的人员数量：" + heartPersonList.size());
 
         for (int i = 0; i < heartPersonList.size(); i++) {
             if (heartBean.getId().equals(heartPersonList.get(i).getId())) {
-                LogUtil.i(tag, "已经在线人员列表中");
-                if (heartBean.getAction() == GlobalConfig.ACTION_PERSON_OFFLINE) {
+                LogUtil.i(tag, "已经在线人员列表中:" + i + " , 内容:" + heartPersonList.get(i).toString());
+                // 如果收到的心跳包的时间比保存的时间要新，并且当前的心跳动作为下线
+                if ((heartBean.getTime()>heartPersonList.get(i).getTime()) && (heartBean.getAction()==GlobalConfig.ACTION_PERSON_OFFLINE)) {
                     LogUtil.i(tag, "个人下线:" + heartBean.getName());
                     heartPersonList.remove(i);
                     EventBus.getDefault().post(heartBean);
@@ -356,18 +359,19 @@ public class ChatService extends Service {
                         for (int i = 0; i < GlobalConfig.baseHeadLength; i++) {
                             head[i] = heart[i];
                         }
-                        BaseDataPackage baseDataPackage = new BaseDataPackage(head);
-                        String id = baseDataPackage.getID();
-                        String name = baseDataPackage.getName();
-                        int ipAddress = baseDataPackage.getIpAddress();
-                        long time = baseDataPackage.getTime();
-                        String extend = baseDataPackage.getExtend();
-
                         for (int i = GlobalConfig.baseHeadLength; i < GlobalConfig.heartDataLength; i++) {
                             body[i - GlobalConfig.baseHeadLength] = heart[i];
                         }
-                        byte action = body[0];  // 心跳的动作
+                        HeartDataPackage data = new HeartDataPackage(head,body);
 
+                        String id = data.getID();
+                        String name = data.getName();
+                        int ipAddress = data.getIpAddress();
+                        long time = data.getTime();
+                        String extend = data.getExtend();
+                        byte action = data.getAction();
+
+                        //4. 将接收到的心跳包使用handler发送给本线程的MessageQueue，进行排队，转换成单线程处理
                         Message msg = Message.obtain();
                         msg.what = HEART_ACTION;
                         msg.obj = new HeartBean(id, name, ipAddress, time, extend, action);
@@ -411,8 +415,9 @@ public class ChatService extends Service {
         final int flag = event.isFlag();
 
         if (flag == GlobalConfig.ACTION_PERSON_ONLINE) {
-            setThreadWorking(true);
+            setHeartThreadWorking(true,true);
         } else if (flag == GlobalConfig.ACTION_PERSON_OFFLINE) {
+            setHeartThreadWorking(true,false);
             handlePersonEvent(flag);
         } else if (flag == GlobalConfig.ACTION_PERSON_EXIT) {
             ChatService.this.onDestroy();
@@ -427,7 +432,7 @@ public class ChatService extends Service {
             public void call(Subscriber<? super Object> subscriber) {
 
                 // 当接收到的是本机需要下线的消息的时候，将在线标志改为下线，然后发送下线的心跳数据包
-                SystemClock.sleep((long) (GlobalConfig.HEART_INTERVAL * 1.1));
+                SystemClock.sleep((long) (GlobalConfig.HEART_INTERVAL * 2.1));
 
                 subscriber.onNext(null);
                 subscriber.onCompleted();
@@ -445,7 +450,7 @@ public class ChatService extends Service {
 
                     @Override
                     public void onNext(Object o) {
-                        setThreadWorking(false);
+                        setHeartThreadWorking(false,false);
                     }
                 });
     }

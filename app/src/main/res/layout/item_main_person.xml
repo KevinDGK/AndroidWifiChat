@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="150px"
+    android:background="#5ff0"
+    android:orientation="horizontal">
+
+    <RelativeLayout
+        android:layout_width="150px"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/iv_icon"
+            android:layout_width="100px"
+            android:layout_height="100px"
+            android:layout_centerInParent="true"
+            android:src="@mipmap/icon_head" />
+
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="100px"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0px"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:text="ID："
+            android:textColor="#000"
+            android:textSize="32px" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0px"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:text="昵称："
+            android:textColor="#000"
+            android:textSize="32px" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_id"
+            android:layout_width="match_parent"
+            android:layout_height="0px"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:text="12345678"
+            android:textColor="#000"
+            android:textSize="32px" />
+
+        <TextView
+            android:id="@+id/tv_name"
+            android:layout_width="match_parent"
+            android:layout_height="0px"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:text="kevin"
+            android:textColor="#000"
+            android:textSize="32px" />
+
+    </LinearLayout>
+
+
+</LinearLayout>

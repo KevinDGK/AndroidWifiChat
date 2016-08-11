@@ -2,6 +2,8 @@ package com.dgk.wifichat.model.bean;
 
 /**
  * Created by Kevin on 2016/8/10.
+ * 心跳的Bean
+ *  用于保存在线的个人/群组的心跳包中的数据。
  */
 public class HeartBean {
 
