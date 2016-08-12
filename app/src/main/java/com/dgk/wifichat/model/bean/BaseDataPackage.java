@@ -53,7 +53,7 @@ public class BaseDataPackage {
 
     public void setTime(long time) {
 //        LogUtil.i(tag,"Extend 字节数组长度：" + data.length);
-        LogUtil.i(tag, "time:  " + time);
+//        LogUtil.i(tag, "time:  " + time);
         for (int i=0;i<8;i++) {
             head[i + 44] = (byte)(time>>>(56-(i*8)));
         }

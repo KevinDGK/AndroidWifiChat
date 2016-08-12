@@ -50,9 +50,9 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
     RecyclerView rvPerson;
 
     private static String tag  = "【MainActivity】";
-
     private MainPersonAdapter personAdapter;
     private ArrayList<HeartBean> personList = new ArrayList<>();
+    private ArrayList<HeartBean> groupList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,10 +74,12 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
     protected void initView() {
         ButterKnife.bind(this);
 
-//        for (int i = 0; i < 10; i++) {
-//            personList.add(new HeartBean("18210186283","dgk" + i,97325484,1470894814957l,"I'm a KaWaYi Cat!",(byte)0));
-//        }
+        // 初始化群的RecycleView
+        // TODO: 2016/8/12 开始模拟群数据，暂时有一个永远存在的群
+//        groupList.add(new HeartBean());
 
+
+        // 初始化个人的RecycleView
         personAdapter = new MainPersonAdapter();
         personAdapter.addAllData(personList);
 

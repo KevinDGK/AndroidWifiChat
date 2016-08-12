@@ -224,7 +224,7 @@ public class ChatService extends Service {
 
         for (int i = 0; i < heartPersonList.size(); i++) {
             if (heartBean.getId().equals(heartPersonList.get(i).getId())) {
-                LogUtil.i(tag, "已经在线人员列表中:" + i + " , 内容:" + heartPersonList.get(i).toString());
+//                LogUtil.i(tag, "已经在线人员列表中:" + i + " , 内容:" + heartPersonList.get(i).toString());
 
                 // 如果收到的是下线提醒的心跳包，则直接发送下线事件
                 if (heartBean.getAction() == GlobalConfig.ACTION_PERSON_OFFLINE) {
@@ -235,8 +235,8 @@ public class ChatService extends Service {
                     // 收到的心跳包的时间比保存的时间要新
                     if (heartBean.getTime() > heartPersonList.get(i).getTime()) {
                         // 如果是仍然是在线的心跳包，则进行更新在线时间
-                        LogUtil.i(tag,"列表中的在线时间为：" + heartPersonList.get(i).getTime()
-                                + "发送过来的数据包的在线时间为：" + heartBean.getTime());
+//                        LogUtil.i(tag,"列表中的在线时间为：" + heartPersonList.get(i).getTime()
+//                                + "发送过来的数据包的在线时间为：" + heartBean.getTime());
                         heartPersonList.get(i).setTime(heartBean.getTime());
                     }
                 }
