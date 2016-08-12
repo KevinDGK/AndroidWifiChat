@@ -9,7 +9,7 @@ import android.util.Log;
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.app.MyApplication;
 import com.dgk.wifichat.base.BasePresenter;
-import com.dgk.wifichat.model.service.ServiceModel;
+import com.dgk.wifichat.model.ServiceModel;
 import com.dgk.wifichat.model.sp.SPConstants;
 import com.dgk.wifichat.model.sp.SPUtils;
 import com.dgk.wifichat.utils.CommonUtil;

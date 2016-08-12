@@ -7,7 +7,6 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 
@@ -17,7 +16,7 @@ import com.dgk.wifichat.base.BaseActivity;
 import com.dgk.wifichat.model.bean.HeartBean;
 import com.dgk.wifichat.model.event.EndLoadingEvent;
 import com.dgk.wifichat.model.event.ExitEvent;
-import com.dgk.wifichat.model.service.ServiceModel;
+import com.dgk.wifichat.model.ServiceModel;
 import com.dgk.wifichat.module.main.recycleview.DividerItemDecoration;
 import com.dgk.wifichat.module.main.recycleview.MainPersonAdapter;
 import com.dgk.wifichat.module.main.recycleview.RecycleItemTouchListener;

@@ -94,7 +94,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:picture="@mipmap/loading_green"
-        app:textColor="@color/color_start_bg"
+        app:textColor="@color/color_loading_text"
         android:visibility="gone"
         android:background="#2000"
         />

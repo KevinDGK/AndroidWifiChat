@@ -1,4 +1,4 @@
-package com.dgk.wifichat.model.service;
+package com.dgk.wifichat.model;
 
 import android.content.Context;
 import android.content.Intent;
@@ -6,6 +6,7 @@ import android.content.Intent;
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.app.MyApplication;
 import com.dgk.wifichat.model.event.ChatServiceSettingEvent;
+import com.dgk.wifichat.model.service.ChatService;
 import com.dgk.wifichat.utils.LogUtil;
 
 import org.greenrobot.eventbus.EventBus;
