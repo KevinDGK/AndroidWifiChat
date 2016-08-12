@@ -15,11 +15,15 @@ import com.dgk.wifichat.R;
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.base.BaseActivity;
 import com.dgk.wifichat.model.bean.HeartBean;
+import com.dgk.wifichat.model.event.EndLoadingEvent;
+import com.dgk.wifichat.model.event.ExitEvent;
 import com.dgk.wifichat.model.service.ServiceModel;
 import com.dgk.wifichat.module.main.recycleview.DividerItemDecoration;
 import com.dgk.wifichat.module.main.recycleview.MainPersonAdapter;
 import com.dgk.wifichat.module.main.recycleview.RecycleItemTouchListener;
 import com.dgk.wifichat.utils.CommonUtil;
+import com.dgk.wifichat.utils.LogUtil;
+import com.dgk.wifichat.view.LoadingRelativeLayout;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -33,6 +37,8 @@ import butterknife.OnClick;
 
 public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter> implements MainContract.IView {
 
+    @BindView(R.id.rl_loading)
+    LoadingRelativeLayout rlLoading;
     @BindView(R.id.tv_online)
     TextView tvOnline;
     @BindView(R.id.tv_offline)
@@ -43,6 +49,8 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
     RecyclerView rvGroup;
     @BindView(R.id.rv_person)
     RecyclerView rvPerson;
+
+    private static String tag  = "【MainActivity】";
 
     private MainPersonAdapter personAdapter;
     private ArrayList<HeartBean> personList = new ArrayList<>();
@@ -124,17 +132,21 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
             case R.id.tv_online:    // 上线
                 if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_ONLINE) {
                     CommonUtil.toast("大人，您已经在线上了，喵~");
+                }else {
+                    startLoading();
+                    if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_OFFLINE) {
+                        ServiceModel.getInstance().onStartChatService();
+                    }
+                    if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_EXIT) {
+                        ServiceModel.getInstance().onCreateChatService();
+                    }
                 }
-                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_OFFLINE) {
-                    ServiceModel.getInstance().onStartChatService();
-                }
-                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_EXIT) {
-                    ServiceModel.getInstance().onCreateChatService();
-                }
+
                 break;
 
             case R.id.tv_offline:   // 下线
                 if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_ONLINE) {
+                    startLoading();
                     ServiceModel.getInstance().onStopHeartService();
                     personAdapter.removeAllData();
                 } else {
@@ -143,19 +155,54 @@ public class MainActivity extends BaseActivity<MainContract.IView, MainPresenter
                 break;
 
             case R.id.tv_exit:      // 退出
+                startLoading();
+                if (GlobalConfig.PERSON_CURRENT_STATE == GlobalConfig.ACTION_PERSON_ONLINE) {
+                    ServiceModel.getInstance().onStopHeartService();
+                    personAdapter.removeAllData();
+                }
                 ServiceModel.getInstance().onDestroyHeartService();
-                finish();
         }
+    }
+
+    /** 开始显示Loading */
+    private void startLoading() {
+        rlLoading.setVisibility(View.VISIBLE);
+        tvOnline.setClickable(false);
+        tvOffline.setClickable(false);
+        tvExit.setClickable(false);
+    }
+
+    /** 停止显示Loading */
+    private void endLoading() {
+        rlLoading.setVisibility(View.GONE);
+        tvOnline.setClickable(true);
+        tvOffline.setClickable(true);
+        tvExit.setClickable(true);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         EventBus.getDefault().unregister(this);
+        android.os.Process.killProcess(android.os.Process.myPid()); // 杀死当前进程!
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onExitEvent(ExitEvent ExitEvent) {
+        LogUtil.i(tag,"onExitEvent");
+        finish();
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onEndLoadingEvent(EndLoadingEvent event) {
+        LogUtil.i(tag,"onEndLoadingEvent");
+        endLoading();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void personEvent(HeartBean heartBean) {
+
+        LogUtil.i(tag,"personEvent：接收到上下线提示:" + heartBean.getName() + " , action:" + heartBean.getAction());
 
         if (heartBean.getAction() == GlobalConfig.ACTION_PERSON_ONLINE) {
             if (!onLine(heartBean)) {

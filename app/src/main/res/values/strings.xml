@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">WifiChat</string>
+    <string name="loading">加载中,请稍后......</string>
 </resources>

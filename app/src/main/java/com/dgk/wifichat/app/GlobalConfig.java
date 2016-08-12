@@ -52,7 +52,7 @@ public class GlobalConfig {
     public static int heartDataLength = baseHeadLength + heartBodyLength;
 
     /** 心跳数据包发送的间隔 */
-    public static int HEART_INTERVAL = 2500;    // ms
+    public static int HEART_INTERVAL = 1000;    // ms
 
     /** 设备信息 */
     public static String devInfo = android.os.Build.MODEL + " Android " + android.os.Build.VERSION.RELEASE;

@@ -17,6 +17,8 @@ public class MyApplication extends Application {
         super.onCreate();
         application = this;
         ctx = getApplicationContext();
+
+
     }
 
     public static MyApplication getInstance() {

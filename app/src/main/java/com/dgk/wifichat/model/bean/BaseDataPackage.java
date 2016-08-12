@@ -1,6 +1,7 @@
 package com.dgk.wifichat.model.bean;
 
 import com.dgk.wifichat.app.GlobalConfig;
+import com.dgk.wifichat.utils.LogUtil;
 
 /**
  * Created by Kevin on 2016/8/9.
@@ -52,10 +53,9 @@ public class BaseDataPackage {
 
     public void setTime(long time) {
 //        LogUtil.i(tag,"Extend 字节数组长度：" + data.length);
-        long temp = time;
-        for (int i = 51; i >= 44; i--) {
-            head[i] = (byte) (temp & 0xFF);
-            temp  = temp >> 8;
+        LogUtil.i(tag, "time:  " + time);
+        for (int i=0;i<8;i++) {
+            head[i + 44] = (byte)(time>>>(56-(i*8)));
         }
     }
 
@@ -96,10 +96,13 @@ public class BaseDataPackage {
     }
 
     public long getTime() {
-//        LogUtil.i(tag,"Extend 字节数组长度：" + data.length);
+//        LogUtil.i(tag,"Time 字节数组长度：" + data.length);
         long time = 0;
-        for (int i = 44; i <= 51; i++) {
-            time = (time << 8) + head[i];
+        long temp;
+        for (int i=0;i<8;i++) {
+            time <<= 8;
+            temp = head[i + 44] & 0xff;
+            time |= temp;
         }
         return time;
     }

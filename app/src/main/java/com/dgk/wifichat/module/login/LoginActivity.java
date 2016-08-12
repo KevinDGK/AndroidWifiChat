@@ -49,6 +49,9 @@ public class LoginActivity extends BaseActivity<LoginContract.IView, LoginPresen
     @Override
     protected void initView() {
         ButterKnife.bind(this);
+
+        etId.clearFocus();
+        etName.clearFocus();
     }
 
     @Override

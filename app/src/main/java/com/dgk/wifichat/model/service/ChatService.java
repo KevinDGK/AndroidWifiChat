@@ -12,8 +12,11 @@ import com.dgk.wifichat.app.MyApplication;
 import com.dgk.wifichat.model.bean.HeartBean;
 import com.dgk.wifichat.model.bean.HeartDataPackage;
 import com.dgk.wifichat.model.event.ChatServiceSettingEvent;
+import com.dgk.wifichat.model.event.EndLoadingEvent;
+import com.dgk.wifichat.model.event.ExitEvent;
 import com.dgk.wifichat.model.sp.SPConstants;
 import com.dgk.wifichat.model.sp.SPUtils;
+import com.dgk.wifichat.utils.CommonUtil;
 import com.dgk.wifichat.utils.LogUtil;
 
 import org.greenrobot.eventbus.EventBus;
@@ -48,6 +51,7 @@ public class ChatService extends Service {
 
     private SendHeartThread sendHeartThread;
     private ReceiveHeartThread receiveHeartThread;
+    private CheckHeartThread checkHeartThread;
 
     private ArrayList<HeartBean> heartPersonList = new ArrayList<>();
 
@@ -114,13 +118,15 @@ public class ChatService extends Service {
         //1. 创建线程
         sendHeartThread = new SendHeartThread();
         receiveHeartThread = new ReceiveHeartThread();
+        checkHeartThread = new CheckHeartThread();
 
         //2. 开始执行线程，即执行run方法
         sendHeartThread.start();
         receiveHeartThread.start();
+        checkHeartThread.start();
 
         //3. 设置线程开始工作，即执行run方法里面的while方法里面的if的逻辑代码
-        setHeartThreadWorking(true,true);
+        setHeartThreadWorking(true, true);
     }
 
     @Override
@@ -147,6 +153,10 @@ public class ChatService extends Service {
                 receiveHeartThread.setRunning(false);
                 receiveHeartThread.interrupt();
             }
+            if (checkHeartThread != null && checkHeartThread.isAlive()) {
+                checkHeartThread.setRunning(false);
+                checkHeartThread.interrupt();
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -167,6 +177,10 @@ public class ChatService extends Service {
         if (receiveHeartThread != null && receiveHeartThread.isAlive()) {
             receiveHeartThread.setWorking(receive);
         }
+        if (checkHeartThread != null && checkHeartThread.isAlive()) {
+            checkHeartThread.setWorking(receive);
+        }
+
 
         heartPersonList.clear();
     }
@@ -211,12 +225,22 @@ public class ChatService extends Service {
         for (int i = 0; i < heartPersonList.size(); i++) {
             if (heartBean.getId().equals(heartPersonList.get(i).getId())) {
                 LogUtil.i(tag, "已经在线人员列表中:" + i + " , 内容:" + heartPersonList.get(i).toString());
-                // 如果收到的心跳包的时间比保存的时间要新，并且当前的心跳动作为下线
-                if ((heartBean.getTime()>heartPersonList.get(i).getTime()) && (heartBean.getAction()==GlobalConfig.ACTION_PERSON_OFFLINE)) {
+
+                // 如果收到的是下线提醒的心跳包，则直接发送下线事件
+                if (heartBean.getAction() == GlobalConfig.ACTION_PERSON_OFFLINE) {
                     LogUtil.i(tag, "个人下线:" + heartBean.getName());
-                    heartPersonList.remove(i);
+                    addOrRemovePersonList(1,i,null,null);
                     EventBus.getDefault().post(heartBean);
+                } else {
+                    // 收到的心跳包的时间比保存的时间要新
+                    if (heartBean.getTime() > heartPersonList.get(i).getTime()) {
+                        // 如果是仍然是在线的心跳包，则进行更新在线时间
+                        LogUtil.i(tag,"列表中的在线时间为：" + heartPersonList.get(i).getTime()
+                                + "发送过来的数据包的在线时间为：" + heartBean.getTime());
+                        heartPersonList.get(i).setTime(heartBean.getTime());
+                    }
                 }
+
                 return;
             }
         }
@@ -224,8 +248,32 @@ public class ChatService extends Service {
         LogUtil.i(tag, "不在在线人员列表中");
         if (heartBean.getAction() == GlobalConfig.ACTION_PERSON_ONLINE) {
             LogUtil.i(tag, "添加到在线人员列表中");
-            heartPersonList.add(heartBean);
+            addOrRemovePersonList(0,-1,heartBean,null);
             EventBus.getDefault().post(heartBean);
+        }
+
+    }
+
+    /**
+     * 从personlist中添加一条数据或者删除一条数据，
+     * 将对list的操作设置成同步的，防止同时添加和修改数据，保证数据的正确性。
+     * 但是要注意，防止死锁哦~
+     * @param flag  0-add ， 1-remove one , 2-removeAll
+     * @param position  删除的位置
+     * @param heartBean 添加的对象，默认添加到队尾
+     */
+    private synchronized void addOrRemovePersonList(int flag, int position, HeartBean heartBean ,ArrayList<HeartBean> dead) {
+
+        switch (flag) {
+            case 0:
+                heartPersonList.add(heartBean);
+                break;
+            case 1:
+                heartPersonList.remove(position);
+                break;
+            case 2:
+                heartPersonList.removeAll(dead);
+                break;
         }
 
     }
@@ -275,6 +323,7 @@ public class ChatService extends Service {
                         heart.setName(SPUtils.getString(MyApplication.getContext(), SPConstants.USER_NAME, "Guest"));
                         heart.setIpAddress(GlobalConfig.localIpAddress);
                         heart.setTime(System.currentTimeMillis());
+                        LogUtil.i(tag,"当前时间：" + System.currentTimeMillis() +  " , 要发送的时间：" + heart.getTime());
                         heart.setExtend(GlobalConfig.extend);
                         heart.setBody(body);
 
@@ -362,7 +411,7 @@ public class ChatService extends Service {
                         for (int i = GlobalConfig.baseHeadLength; i < GlobalConfig.heartDataLength; i++) {
                             body[i - GlobalConfig.baseHeadLength] = heart[i];
                         }
-                        HeartDataPackage data = new HeartDataPackage(head,body);
+                        HeartDataPackage data = new HeartDataPackage(head, body);
 
                         String id = data.getID();
                         String name = data.getName();
@@ -409,18 +458,105 @@ public class ChatService extends Service {
         }
     }
 
+    /**
+     * 检测心跳时间的线程
+     */
+    private class CheckHeartThread extends Thread {
+
+        private String tag = "【CheckHeartThread】";
+        private boolean isRunning = true;   // 线程是否执行run方法里面的逻辑循环，初始化执行run方法
+        private boolean isWorking = false;  // 线程是否可以工作(发送/接收数据)
+
+        public CheckHeartThread() {
+
+        }
+
+        @Override
+        public void run() {
+            super.run();
+
+            LogUtil.i(tag, "线程开始运行");
+
+            while (isRunning) {
+
+                SystemClock.sleep(GlobalConfig.HEART_INTERVAL * 30);
+
+                LogUtil.i(tag,"开始清查队伍里面是否含有变异的死尸!!!");
+
+                if (isWorking) {
+
+                    try {
+
+                        if (heartPersonList!=null && heartPersonList.size()>0) {
+
+                            ArrayList<HeartBean> dead = new ArrayList<>();
+                            for (int i = 0; i < heartPersonList.size(); i++) {
+                                HeartBean heartBean = heartPersonList.get(i);
+                                LogUtil.i(tag,"第" + i + "只小狗狗：" + heartBean.toString());
+                                if (System.currentTimeMillis() - heartBean.getTime() > GlobalConfig.HEART_INTERVAL * 15) {
+                                    LogUtil.i(tag,"当前时间为：" + System.currentTimeMillis());
+                                    LogUtil.i(tag,heartBean.getName() + " 已经死了一百年了！！！");
+                                    heartBean.setAction(GlobalConfig.ACTION_PERSON_OFFLINE);
+//                                    addOrRemovePersonList(false,i,null);
+                                    dead.add(heartBean);
+                                    EventBus.getDefault().post(heartBean);
+                                }
+                            }
+                            if (dead.size()>0) {
+                                addOrRemovePersonList(2,-1,null,dead);
+                            }
+                        }
+                    } catch (Exception e) {
+                        LogUtil.i(tag, "检查队伍里面是否有死尸出错! 闹鬼了!!!");
+                        e.printStackTrace();
+                    }
+
+                }
+
+            }
+
+        }
+
+        /**
+         * 停止run()方法
+         * 当想要停止线程的时候，为了避免死锁或者其他异常情况的产生，需要先停止run方法，
+         * 本方法通过改变标记来停止run方法的运行，然后就可以正常的停止线程。
+         *
+         * @param flag false 停止run方法
+         */
+        public void setRunning(Boolean flag) {
+            isRunning = flag;
+        }
+
+        /**
+         * 设置run方法里面的while循环里面的逻辑是否执行
+         * 如果需要线程发送和接收数据的时候，将该标记置为true；
+         * 如果不需要，置为false。
+         */
+        public void setWorking(Boolean flag) {
+            isWorking = flag;
+        }
+    }
+
+//    @Subscribe(threadMode = ThreadMode.MAIN)
+//    public void onExitEvent(ExitEvent ExitEvent) {
+//        LogUtil.i(tag,"onExitEvent");
+//        this.onDestroy();
+//    }
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void personEvent(final ChatServiceSettingEvent event) {
+
+        LogUtil.i(tag, "ChatServiceSettingEvent:" + event.isFlag());
 
         final int flag = event.isFlag();
 
         if (flag == GlobalConfig.ACTION_PERSON_ONLINE) {
-            setHeartThreadWorking(true,true);
-        } else if (flag == GlobalConfig.ACTION_PERSON_OFFLINE) {
-            setHeartThreadWorking(true,false);
+            setHeartThreadWorking(true, true);
+            EventBus.getDefault().post(new EndLoadingEvent());
+        } else {
+            setHeartThreadWorking(true, false);
             handlePersonEvent(flag);
-        } else if (flag == GlobalConfig.ACTION_PERSON_EXIT) {
-            ChatService.this.onDestroy();
         }
 
     }
@@ -450,7 +586,14 @@ public class ChatService extends Service {
 
                     @Override
                     public void onNext(Object o) {
-                        setHeartThreadWorking(false,false);
+                        setHeartThreadWorking(false, false);
+                        if (flag == GlobalConfig.ACTION_PERSON_EXIT) {
+                            GlobalConfig.PERSON_CURRENT_STATE = GlobalConfig.ACTION_PERSON_EXIT;
+                            EventBus.getDefault().post(new ExitEvent());
+                            ChatService.this.onDestroy();
+                        } else {
+                            EventBus.getDefault().post(new EndLoadingEvent());
+                        }
                     }
                 });
     }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 自定义属性：旋转的loading布局 -->
+    <declare-styleable name="LoadingRelativeLayout">
+        <attr name="picture" format="reference" />  <!-- 旋转的图片 -->
+        <attr name="textColor" format="color" />    <!-- 字体的颜色 -->
+    </declare-styleable>
+</resources>

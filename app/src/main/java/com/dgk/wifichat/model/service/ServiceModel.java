@@ -6,6 +6,7 @@ import android.content.Intent;
 import com.dgk.wifichat.app.GlobalConfig;
 import com.dgk.wifichat.app.MyApplication;
 import com.dgk.wifichat.model.event.ChatServiceSettingEvent;
+import com.dgk.wifichat.utils.LogUtil;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -19,6 +20,8 @@ import org.greenrobot.eventbus.EventBus;
  *      。。。
  */
 public class ServiceModel {
+
+    private static String tag = "【ServiceModel】";
 
     private static ServiceModel serviceModel;
     private static Context ctx;
@@ -46,10 +49,10 @@ public class ServiceModel {
      */
     public void onCreateChatService() {
 
+        LogUtil.i(tag,"onCreateChatService");
         // 创建聊天服务
         intent_ChatService = new Intent(ctx, ChatService.class);
         ctx.startService(intent_ChatService);
-
     }
 
     /**
@@ -58,6 +61,7 @@ public class ServiceModel {
      */
     public void onStartChatService() {
 
+        LogUtil.i(tag,"onStartChatService");
         GlobalConfig.PERSON_CURRENT_STATE = GlobalConfig.ACTION_PERSON_ONLINE;
         EventBus.getDefault().post(new ChatServiceSettingEvent(GlobalConfig.ACTION_PERSON_ONLINE));
     }
@@ -68,6 +72,7 @@ public class ServiceModel {
      */
     public void onStopHeartService() {
 
+        LogUtil.i(tag,"onStopHeartService");
         GlobalConfig.PERSON_CURRENT_STATE = GlobalConfig.ACTION_PERSON_OFFLINE;
         EventBus.getDefault().post(new ChatServiceSettingEvent(GlobalConfig.ACTION_PERSON_OFFLINE));
     }
@@ -78,7 +83,10 @@ public class ServiceModel {
      */
     public void onDestroyHeartService() {
 
+        LogUtil.i(tag,"onDestroyHeartService");
+        GlobalConfig.PERSON_CURRENT_STATE = GlobalConfig.ACTION_PERSON_OFFLINE;
         EventBus.getDefault().post(new ChatServiceSettingEvent(GlobalConfig.ACTION_PERSON_EXIT));
+//        ctx.stopService(intent_ChatService);
     }
 
 }
